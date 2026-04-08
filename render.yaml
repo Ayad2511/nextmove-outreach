@@ -4,7 +4,7 @@ services:
     env: node
     region: frankfurt
     plan: free
-    buildCommand: npm install && npm run build && npm run build:server
+    buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
@@ -16,7 +16,6 @@ services:
         value: production
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
-      # API Keys — vul in via Render dashboard zodra accounts klaar zijn
       - key: CLAY_API_KEY
         value: ""
       - key: CLAY_TABLE_ID
@@ -43,6 +42,94 @@ services:
         generateValue: true
       - key: NEXTAUTH_URL
         value: "https://nextmove-outreach.onrender.com"
+
+  # Dagelijkse cron jobs — ma t/m vr
+  # Render free plan: cron jobs vereisen minimaal Starter plan ($7/mnd)
+  # Alternatief: gebruik een gratis cron service (cron-job.org) die POST /api/cron aanroept
+  - type: cron
+    name: nextmove-sync-leads
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 7 * * 1-5"   # 08:00 NL (UTC+1) — ma t/m vr
+    buildCommand: echo "no build needed"
+    startCommand: >
+      curl -s -X POST https://nextmove-outreach.onrender.com/api/cron?job=sync_leads
+      -H "x-cron-secret: $CRON_SECRET"
+    envVars:
+      - key: CRON_SECRET
+        fromService:
+          name: nextmove-outreach
+          type: web
+          envVarKey: CRON_SECRET
+
+  - type: cron
+    name: nextmove-email
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 8 * * 1-5"   # 09:00 NL
+    buildCommand: echo "no build needed"
+    startCommand: >
+      curl -s -X POST https://nextmove-outreach.onrender.com/api/cron?job=email
+      -H "x-cron-secret: $CRON_SECRET"
+    envVars:
+      - key: CRON_SECRET
+        fromService:
+          name: nextmove-outreach
+          type: web
+          envVarKey: CRON_SECRET
+
+  - type: cron
+    name: nextmove-linkedin
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 9 * * 1-5"   # 10:00 NL
+    buildCommand: echo "no build needed"
+    startCommand: >
+      curl -s -X POST https://nextmove-outreach.onrender.com/api/cron?job=linkedin
+      -H "x-cron-secret: $CRON_SECRET"
+    envVars:
+      - key: CRON_SECRET
+        fromService:
+          name: nextmove-outreach
+          type: web
+          envVarKey: CRON_SECRET
+
+  - type: cron
+    name: nextmove-instagram
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 10 * * 1-5"  # 11:00 NL
+    buildCommand: echo "no build needed"
+    startCommand: >
+      curl -s -X POST https://nextmove-outreach.onrender.com/api/cron?job=instagram
+      -H "x-cron-secret: $CRON_SECRET"
+    envVars:
+      - key: CRON_SECRET
+        fromService:
+          name: nextmove-outreach
+          type: web
+          envVarKey: CRON_SECRET
+
+  - type: cron
+    name: nextmove-inbox-sync
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 17 * * *"    # 18:00 NL — elke dag
+    buildCommand: echo "no build needed"
+    startCommand: >
+      curl -s -X POST https://nextmove-outreach.onrender.com/api/cron?job=sync_inbox
+      -H "x-cron-secret: $CRON_SECRET"
+    envVars:
+      - key: CRON_SECRET
+        fromService:
+          name: nextmove-outreach
+          type: web
+          envVarKey: CRON_SECRET
 
 databases:
   - name: nextmove-db

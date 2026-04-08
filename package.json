@@ -3,10 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "ts-node --project tsconfig.server.json server.ts",
+    "dev": "next dev",
     "build": "next build",
-    "start": "node dist/server.js",
-    "build:server": "tsc --project tsconfig.server.json",
+    "start": "next start",
     "migrate": "ts-node --project tsconfig.server.json scripts/migrate.ts"
   },
   "dependencies": {
