@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: nextmove-outreach
+    name: nextmove-outreach-1
     env: node
     region: frankfurt
     plan: free
@@ -41,7 +41,7 @@ services:
       - key: NEXTAUTH_SECRET
         generateValue: true
       - key: NEXTAUTH_URL
-        value: "https://nextmove-outreach.onrender.com"
+        value: "https://nextmove-outreach-1.onrender.com"
 
   # Dagelijkse cron jobs — ma t/m vr
   # Render free plan: cron jobs vereisen minimaal Starter plan ($7/mnd)
@@ -54,7 +54,7 @@ services:
     schedule: "0 7 * * 1-5"   # 08:00 NL (UTC+1) — ma t/m vr
     buildCommand: echo "no build needed"
     startCommand: >
-      curl -s -X POST https://nextmove-outreach.onrender.com/api/cron?job=sync_leads
+      curl -s -X POST https://nextmove-outreach-1.onrender.com/api/cron?job=sync_leads
       -H "x-cron-secret: $CRON_SECRET"
     envVars:
       - key: CRON_SECRET
@@ -71,7 +71,7 @@ services:
     schedule: "0 8 * * 1-5"   # 09:00 NL
     buildCommand: echo "no build needed"
     startCommand: >
-      curl -s -X POST https://nextmove-outreach.onrender.com/api/cron?job=email
+      curl -s -X POST https://nextmove-outreach-1.onrender.com/api/cron?job=email
       -H "x-cron-secret: $CRON_SECRET"
     envVars:
       - key: CRON_SECRET
@@ -88,7 +88,7 @@ services:
     schedule: "0 9 * * 1-5"   # 10:00 NL
     buildCommand: echo "no build needed"
     startCommand: >
-      curl -s -X POST https://nextmove-outreach.onrender.com/api/cron?job=linkedin
+      curl -s -X POST https://nextmove-outreach-1.onrender.com/api/cron?job=linkedin
       -H "x-cron-secret: $CRON_SECRET"
     envVars:
       - key: CRON_SECRET
@@ -105,7 +105,7 @@ services:
     schedule: "0 10 * * 1-5"  # 11:00 NL
     buildCommand: echo "no build needed"
     startCommand: >
-      curl -s -X POST https://nextmove-outreach.onrender.com/api/cron?job=instagram
+      curl -s -X POST https://nextmove-outreach-1.onrender.com/api/cron?job=instagram
       -H "x-cron-secret: $CRON_SECRET"
     envVars:
       - key: CRON_SECRET
@@ -122,7 +122,7 @@ services:
     schedule: "0 17 * * *"    # 18:00 NL — elke dag
     buildCommand: echo "no build needed"
     startCommand: >
-      curl -s -X POST https://nextmove-outreach.onrender.com/api/cron?job=sync_inbox
+      curl -s -X POST https://nextmove-outreach-1.onrender.com/api/cron?job=sync_inbox
       -H "x-cron-secret: $CRON_SECRET"
     envVars:
       - key: CRON_SECRET
