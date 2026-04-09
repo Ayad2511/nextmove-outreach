@@ -19,6 +19,12 @@ export async function POST(req: NextRequest) {
   const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
   const results: Record<string, unknown> = {};
 
+  if (job === 'sync_apify' || job === 'daily_outreach') {
+    // 0. Sync leads van Apify (08:00 NL)
+    const apifyResp = await fetch(`${baseUrl}/api/leads/apify`);
+    results.apify = await apifyResp.json();
+  }
+
   if (job === 'sync_leads' || job === 'daily_outreach') {
     // 1. Sync leads van Clay
     const syncResp = await fetch(`${baseUrl}/api/leads/sync`, { method: 'POST' });
