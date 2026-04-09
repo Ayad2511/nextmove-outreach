@@ -8,10 +8,6 @@ services:
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: nextmove-db
-          property: connectionString
       - key: NODE_ENV
         value: production
       - key: NEXT_TELEMETRY_DISABLED
@@ -130,10 +126,3 @@ services:
           name: nextmove-outreach
           type: web
           envVarKey: CRON_SECRET
-
-databases:
-  - name: nextmove-db
-    databaseName: nextmove
-    user: nextmove
-    plan: free
-    region: frankfurt
