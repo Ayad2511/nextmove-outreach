@@ -4,46 +4,69 @@ import { query } from '@/lib/db';
 const DAILY_LIMIT = 7;
 const ACTOR_ID = 'rhymed_jellyfish/instagram-dm-automation-messages';
 
-async function getTodayCount(): Promise<number> {
+const MESSAGE_1 = `Wa alaykum assalaam {firstName} 🤍
+
+Ik zag jullie {personalization} — masha'Allah wat mooi werk.
+
+Ik ben Tamara van Next Move Marketing. Ik heb speciaal voor jullie een video opgenomen. Mag ik die doorsturen? 🎥`;
+
+async function getTodayCount(channel: string): Promise<number> {
   const rows = await query<{ count: string }>(
     `SELECT COALESCE(count, 0) as count FROM daily_limits
-     WHERE date = CURRENT_DATE AND channel = 'instagram_apify_dm'`
+     WHERE date = CURRENT_DATE AND channel = $1`,
+    [channel]
   );
   return rows.length ? parseInt(rows[0].count) : 0;
 }
 
-// POST /api/instagram/dm
-// Body (optioneel): { message: string, limit: number }
+async function launchApifyDM(
+  apiKey: string,
+  sessionId: string,
+  messages: { username: string; message: string }[]
+): Promise<string> {
+  const resp = await fetch(
+    `https://api.apify.com/v2/acts/${encodeURIComponent(ACTOR_ID)}/runs?token=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        messages,          // per-user berichten met gepersonaliseerde tekst
+        minDelay: 45,
+        maxDelay: 90,
+      }),
+    }
+  );
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Apify ${resp.status}: ${text}`);
+  }
+
+  const data = await resp.json() as { data: { id: string } };
+  return data.data.id;
+}
+
+// POST /api/instagram/dm — eerste contact (bericht 1)
 export async function POST(req: NextRequest) {
   const apiKey = process.env.APIFY_API_KEY;
   const sessionId = process.env.INSTAGRAM_SESSION_ID;
 
-  if (!apiKey) {
-    return NextResponse.json({ error: 'APIFY_API_KEY niet ingesteld' }, { status: 500 });
-  }
-  if (!sessionId) {
-    return NextResponse.json({ error: 'INSTAGRAM_SESSION_ID niet ingesteld' }, { status: 500 });
-  }
+  if (!apiKey)   return NextResponse.json({ error: 'APIFY_API_KEY niet ingesteld' }, { status: 500 });
+  if (!sessionId) return NextResponse.json({ error: 'INSTAGRAM_SESSION_ID niet ingesteld' }, { status: 500 });
 
-  const body = await req.json().catch(() => ({})) as { message?: string; limit?: number };
+  const body = await req.json().catch(() => ({})) as { limit?: number };
   const maxToday = Math.min(body.limit ?? DAILY_LIMIT, DAILY_LIMIT);
-  const message = body.message
-    ?? 'Hey! Ik zag je brand voorbijkomen en vond het echt mooi 🙌 Ik help brands zoals die van jou groeien — mag ik je iets sturen?';
 
-  const todayCount = await getTodayCount();
+  const todayCount = await getTodayCount('instagram_apify_dm');
   const remaining = Math.max(0, maxToday - todayCount);
 
   if (remaining === 0) {
-    return NextResponse.json({
-      message: `Dagelijks limiet (${DAILY_LIMIT}) bereikt`,
-      sent: 0,
-      todayTotal: todayCount,
-    });
+    return NextResponse.json({ message: `Dagelijks limiet (${DAILY_LIMIT}) bereikt`, sent: 0, todayTotal: todayCount });
   }
 
-  // Haal leads op die nog geen Instagram DM ontvangen hebben via Apify
-  const leads = await query<{ id: number; first_name: string; instagram_handle: string }>(
-    `SELECT id, first_name, instagram_handle FROM leads
+  const leads = await query<{ id: number; first_name: string; instagram_handle: string; niche: string }>(
+    `SELECT id, first_name, instagram_handle, niche FROM leads
      WHERE instagram_handle IS NOT NULL AND instagram_handle != ''
        AND status NOT IN ('niet_geinteresseerd')
        AND id NOT IN (
@@ -59,74 +82,45 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'Geen leads beschikbaar voor Instagram DM', sent: 0 });
   }
 
-  // Bouw Apify actor input op
-  const usernames = leads.map(l => l.instagram_handle.replace(/^@/, ''));
-
-  const actorInput = {
-    sessionId,
-    usernames,
-    message,
-    delayBetweenMessages: 45,   // seconden — veilig tempo
-  };
+  const messages = leads.map(l => ({
+    username: l.instagram_handle.replace(/^@/, ''),
+    message: MESSAGE_1
+      .replace('{firstName}', l.first_name?.split(' ')[0] ?? 'zus')
+      .replace('{personalization}', l.niche ?? 'mooie collectie'),
+  }));
 
   let runId: string;
   try {
-    const resp = await fetch(
-      `https://api.apify.com/v2/acts/${encodeURIComponent(ACTOR_ID)}/runs?token=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(actorInput),
-      }
-    );
-
-    if (!resp.ok) {
-      const text = await resp.text();
-      console.error('[instagram-dm] Apify actor fout:', resp.status, text);
-      return NextResponse.json({ error: `Apify fout: ${resp.status}` }, { status: 502 });
-    }
-
-    const data = await resp.json() as { data: { id: string } };
-    runId = data.data.id;
+    runId = await launchApifyDM(apiKey, sessionId, messages);
   } catch (err) {
-    return NextResponse.json({ error: `Fetch mislukt: ${(err as Error).message}` }, { status: 502 });
+    console.error('[instagram-dm]', (err as Error).message);
+    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
   }
 
-  // Sla outreach log op
   for (const lead of leads) {
     await query(
       `INSERT INTO outreach_log (lead_id, channel, template_key, success, external_id)
-       VALUES ($1, 'instagram_apify_dm', 'dm_apify', true, $2)`,
+       VALUES ($1, 'instagram_apify_dm', 'bericht_1', true, $2)`,
       [lead.id, runId]
     );
   }
 
-  // Update dagelijks teller
   await query(
     `INSERT INTO daily_limits (date, channel, count) VALUES (CURRENT_DATE, 'instagram_apify_dm', $1)
      ON CONFLICT (date, channel) DO UPDATE SET count = daily_limits.count + $1`,
     [leads.length]
   );
 
-  console.log(`[instagram-dm] ${leads.length} DMs gestart via Apify run ${runId}`);
-
-  return NextResponse.json({
-    sent: leads.length,
-    runId,
-    todayTotal: todayCount + leads.length,
-    limit: DAILY_LIMIT,
-    usernames,
-  });
+  console.log(`[instagram-dm] bericht_1: ${leads.length} DMs gestart via run ${runId}`);
+  return NextResponse.json({ sent: leads.length, runId, todayTotal: todayCount + leads.length, limit: DAILY_LIMIT });
 }
 
-// GET /api/instagram/dm — status van vandaag
+// GET /api/instagram/dm — dagelijkse status
 export async function GET() {
-  const todayCount = await getTodayCount();
+  const todayCount = await getTodayCount('instagram_apify_dm');
+  const followupCount = await getTodayCount('instagram_apify_followup');
   return NextResponse.json({
-    today: {
-      sent: todayCount,
-      limit: DAILY_LIMIT,
-      remaining: Math.max(0, DAILY_LIMIT - todayCount),
-    },
+    dm:       { sent: todayCount,    limit: DAILY_LIMIT, remaining: Math.max(0, DAILY_LIMIT - todayCount) },
+    followup: { sent: followupCount, limit: DAILY_LIMIT, remaining: Math.max(0, DAILY_LIMIT - followupCount) },
   });
 }

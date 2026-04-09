@@ -56,9 +56,15 @@ export async function POST(req: NextRequest) {
   }
 
   if (job === 'instagram_dm' || job === 'daily_outreach') {
-    // 5b. Instagram DM via Apify (11:00 NL)
+    // 5b. Instagram DM bericht 1 via Apify (11:00 NL)
     const igDmResp = await fetch(`${baseUrl}/api/instagram/dm`, { method: 'POST' });
     results.instagram_dm = await igDmResp.json();
+  }
+
+  if (job === 'instagram_followup' || job === 'daily_outreach') {
+    // 5c. Instagram followup bericht 2 — alleen naar leads met replied + video_url (12:00 NL)
+    const igFollowupResp = await fetch(`${baseUrl}/api/instagram/dm/followup`, { method: 'POST' });
+    results.instagram_followup = await igFollowupResp.json();
   }
 
   if (job === 'sync_inbox' || job === 'daily_outreach') {
