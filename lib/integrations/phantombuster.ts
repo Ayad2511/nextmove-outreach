@@ -79,6 +79,34 @@ export async function launchInstagramDM(leads: InstagramDMInput[]): Promise<stri
   return launchAgent(agentId, argument);
 }
 
+export async function launchInstagramLiker(profileUrls: string[]): Promise<string | null> {
+  const agentId = process.env.PHANTOMBUSTER_LIKER_AGENT_ID;
+  if (!process.env.PHANTOMBUSTER_API_KEY || !agentId) {
+    console.log('[Phantombuster] Liker agent ID niet ingesteld, skip.');
+    return null;
+  }
+  return launchAgent(agentId, {
+    spreadsheetUrl: profileUrls.join('\n'),
+    numberOfProfilesPerLaunch: Math.min(profileUrls.length, 30),
+    likeLastPublication: true,
+    watchStories: false,
+  });
+}
+
+export async function launchInstagramStoryViewer(profileUrls: string[]): Promise<string | null> {
+  const agentId = process.env.PHANTOMBUSTER_STORY_AGENT_ID;
+  if (!process.env.PHANTOMBUSTER_API_KEY || !agentId) {
+    console.log('[Phantombuster] Story agent ID niet ingesteld, skip.');
+    return null;
+  }
+  return launchAgent(agentId, {
+    spreadsheetUrl: profileUrls.join('\n'),
+    numberOfProfilesPerLaunch: Math.min(profileUrls.length, 30),
+    likeLastPublication: false,
+    watchStories: true,
+  });
+}
+
 export async function getAgentStatus(agentId: string): Promise<PhantomResult | null> {
   if (!process.env.PHANTOMBUSTER_API_KEY) return null;
 

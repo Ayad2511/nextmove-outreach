@@ -30,7 +30,15 @@ function authHeader() {
 }
 
 export async function addLeadToCampaign(
-  lead: { email: string; firstName?: string | null; lastName?: string | null; companyName?: string | null },
+  lead: {
+    email: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    companyName?: string | null;
+    niche?: string | null;
+    videoUrl?: string | null;
+    vslUrl?: string | null;
+  },
   campaignId?: string
 ): Promise<boolean> {
   const cid = campaignId ?? process.env.LEMLIST_CAMPAIGN_ID;
@@ -44,6 +52,10 @@ export async function addLeadToCampaign(
     firstName: lead.firstName ?? '',
     lastName: lead.lastName ?? '',
     companyName: lead.companyName ?? '',
+    brandName: lead.companyName ?? '',
+    niche: lead.niche ?? '',
+    videoUrl: lead.videoUrl ?? '',
+    vslUrl: lead.vslUrl ?? process.env.VSL_URL ?? '',
   };
 
   const resp = await fetch(`${BASE_URL}/campaigns/${cid}/leads/${lead.email}`, {

@@ -12,16 +12,24 @@ CREATE TABLE IF NOT EXISTS leads (
   email             TEXT UNIQUE,
   company_name      TEXT,
   instagram_handle  TEXT,
+  owner_name        TEXT,
+  owner_instagram   TEXT,
+  owner_linkedin_url TEXT,
   linkedin_url      TEXT,
   niche             TEXT,
-  source            TEXT NOT NULL DEFAULT 'clay',
-  status            TEXT NOT NULL DEFAULT 'te_contacteren',
+  source            TEXT NOT NULL DEFAULT 'apify',
+  status            TEXT NOT NULL DEFAULT 'new',
   heygen_video_url  TEXT,
   heygen_video_id   TEXT,
   clay_row_id       TEXT UNIQUE,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Veilige kolom-toevoegingen voor bestaande databases
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS owner_name TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS owner_instagram TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS owner_linkedin_url TEXT;
 
 CREATE TABLE IF NOT EXISTS outreach_log (
   id              SERIAL PRIMARY KEY,

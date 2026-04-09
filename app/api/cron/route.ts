@@ -7,7 +7,16 @@ function isAuthorized(req: NextRequest): boolean {
   return req.headers.get('x-cron-secret') === secret;
 }
 
-// POST /api/cron?job=daily_outreach
+// Dagelijkse cron volgorde (NL tijd):
+// 07:00 — lead enrichment (owner naam + persoonlijk IG + email via Apify, max 20)
+// 08:00 — Apify Instagram scrape (nieuwe leads)
+// 09:00 — Lemlist email sequence (max 40, onafhankelijk van warming)
+// 10:00 — Phantombuster Auto Liker (verrijkte leads, warming stap 1)
+// 10:30 — Phantombuster Story Viewer (liked leads → warmed, optioneel)
+// 11:00 — Instagram DM bericht 1 (alleen warmed/liked leads, naar persoonlijk account, max 7)
+// 12:00 — Instagram DM followup bericht 2 (replied + video_url, max 7)
+// 13:00 — LinkedIn connect (max 15, onafhankelijk van Instagram)
+
 export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -19,58 +28,70 @@ export async function POST(req: NextRequest) {
   const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
   const results: Record<string, unknown> = {};
 
+  // 07:00 — Lead enrichment
+  if (job === 'enrich' || job === 'daily_outreach') {
+    const r = await fetch(`${baseUrl}/api/leads/enrich`, { method: 'POST' });
+    results.enrich = await r.json();
+  }
+
+  // 08:00 — Apify Instagram scrape (nieuwe leads)
   if (job === 'sync_apify' || job === 'daily_outreach') {
-    // 0. Sync leads van Apify (08:00 NL)
-    const apifyResp = await fetch(`${baseUrl}/api/leads/apify`);
-    results.apify = await apifyResp.json();
+    const r = await fetch(`${baseUrl}/api/leads/apify`);
+    results.apify = await r.json();
   }
 
-  if (job === 'sync_leads' || job === 'daily_outreach') {
-    // 1. Sync leads van Clay
-    const syncResp = await fetch(`${baseUrl}/api/leads/sync`, { method: 'POST' });
-    results.sync = await syncResp.json();
+  // Clay sync (optioneel)
+  if (job === 'sync_leads') {
+    const r = await fetch(`${baseUrl}/api/leads/sync`, { method: 'POST' });
+    results.sync = await r.json();
   }
 
-  if (job === 'generate_videos' || job === 'daily_outreach') {
-    // 2. Genereer HeyGen video's voor nieuwe leads
-    const videoResp = await fetch(`${baseUrl}/api/video/generate`, { method: 'POST' });
-    results.videos = await videoResp.json();
-  }
-
+  // 09:00 — Email campagne via Lemlist (3-staps sequence, onafhankelijk)
   if (job === 'email' || job === 'daily_outreach') {
-    // 3. Email campagne (40/dag via Lemlist)
-    const emailResp = await fetch(`${baseUrl}/api/campaigns/email`, { method: 'POST' });
-    results.email = await emailResp.json();
+    const r = await fetch(`${baseUrl}/api/campaigns/email`, { method: 'POST' });
+    results.email = await r.json();
   }
 
-  if (job === 'linkedin' || job === 'daily_outreach') {
-    // 4. LinkedIn connect (15/dag via Phantombuster)
-    const linkedinResp = await fetch(`${baseUrl}/api/campaigns/linkedin`, { method: 'POST' });
-    results.linkedin = await linkedinResp.json();
+  // 10:00 — Phantombuster Auto Liker (warming stap 1)
+  if (job === 'instagram_like' || job === 'daily_outreach') {
+    const r = await fetch(`${baseUrl}/api/instagram/like`, { method: 'POST' });
+    results.instagram_like = await r.json();
   }
 
-  if (job === 'instagram' || job === 'daily_outreach') {
-    // 5. Instagram DM (7/dag via Phantombuster)
-    const igResp = await fetch(`${baseUrl}/api/campaigns/instagram`, { method: 'POST' });
-    results.instagram = await igResp.json();
+  // 10:30 — Phantombuster Story Viewer (warming stap 2, optioneel)
+  if (job === 'instagram_story' || job === 'daily_outreach') {
+    const r = await fetch(`${baseUrl}/api/instagram/story`, { method: 'POST' });
+    results.instagram_story = await r.json();
   }
 
+  // 11:00 — Instagram DM bericht 1 (alleen warmed/liked, naar persoonlijk account)
   if (job === 'instagram_dm' || job === 'daily_outreach') {
-    // 5b. Instagram DM bericht 1 via Apify (11:00 NL)
-    const igDmResp = await fetch(`${baseUrl}/api/instagram/dm`, { method: 'POST' });
-    results.instagram_dm = await igDmResp.json();
+    const r = await fetch(`${baseUrl}/api/instagram/dm`, { method: 'POST' });
+    results.instagram_dm = await r.json();
   }
 
+  // 12:00 — Instagram DM followup bericht 2 (replied + video_url)
   if (job === 'instagram_followup' || job === 'daily_outreach') {
-    // 5c. Instagram followup bericht 2 — alleen naar leads met replied + video_url (12:00 NL)
-    const igFollowupResp = await fetch(`${baseUrl}/api/instagram/dm/followup`, { method: 'POST' });
-    results.instagram_followup = await igFollowupResp.json();
+    const r = await fetch(`${baseUrl}/api/instagram/dm/followup`, { method: 'POST' });
+    results.instagram_followup = await r.json();
   }
 
-  if (job === 'sync_inbox' || job === 'daily_outreach') {
-    // 6. Sync inbox replies van Lemlist
-    const inboxResp = await fetch(`${baseUrl}/api/inbox`, { method: 'POST' });
-    results.inbox = await inboxResp.json();
+  // 13:00 — LinkedIn connect (onafhankelijk van Instagram)
+  if (job === 'linkedin' || job === 'daily_outreach') {
+    const r = await fetch(`${baseUrl}/api/campaigns/linkedin`, { method: 'POST' });
+    results.linkedin = await r.json();
+  }
+
+  // HeyGen video generatie
+  if (job === 'generate_videos') {
+    const r = await fetch(`${baseUrl}/api/video/generate`, { method: 'POST' });
+    results.videos = await r.json();
+  }
+
+  // Inbox sync
+  if (job === 'sync_inbox') {
+    const r = await fetch(`${baseUrl}/api/inbox`, { method: 'POST' });
+    results.inbox = await r.json();
   }
 
   console.log(`[cron] Job '${job}' voltooid:`, JSON.stringify(results));
