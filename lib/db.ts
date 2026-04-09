@@ -2,17 +2,26 @@ import { Pool, PoolClient } from 'pg';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production'
+  ssl: process.env.DATABASE_URL
     ? { rejectUnauthorized: false }
     : false,
+});
+
+pool.on('error', (err) => {
+  console.error('[db] Unexpected pool error:', err.message);
 });
 
 export async function query<T = Record<string, unknown>>(
   text: string,
   params?: unknown[]
 ): Promise<T[]> {
-  const result = await pool.query(text, params);
-  return result.rows as T[];
+  try {
+    const result = await pool.query(text, params);
+    return result.rows as T[];
+  } catch (err) {
+    console.error('[db] Query error:', (err as Error).message, '| SQL:', text.slice(0, 80));
+    throw err;
+  }
 }
 
 export async function queryOne<T = Record<string, unknown>>(
@@ -44,7 +53,8 @@ export async function testConnection(): Promise<boolean> {
   try {
     await query('SELECT 1');
     return true;
-  } catch {
+  } catch (err) {
+    console.error('[db] testConnection failed:', (err as Error).message);
     return false;
   }
 }
