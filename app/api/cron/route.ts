@@ -55,6 +55,12 @@ export async function POST(req: NextRequest) {
     results.instagram = await igResp.json();
   }
 
+  if (job === 'instagram_dm' || job === 'daily_outreach') {
+    // 5b. Instagram DM via Apify (11:00 NL)
+    const igDmResp = await fetch(`${baseUrl}/api/instagram/dm`, { method: 'POST' });
+    results.instagram_dm = await igDmResp.json();
+  }
+
   if (job === 'sync_inbox' || job === 'daily_outreach') {
     // 6. Sync inbox replies van Lemlist
     const inboxResp = await fetch(`${baseUrl}/api/inbox`, { method: 'POST' });
