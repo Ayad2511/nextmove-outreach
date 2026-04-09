@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: nextmove-outreach-1
-    env: node
-    buildCommand: npm install && npm run build
-    startCommand: npm start
-    plan: free
