@@ -8,6 +8,10 @@ function isAuthorized(req: NextRequest): boolean {
 }
 
 // Dagelijkse cron volgorde (NL tijd):
+// 06:00 — enrich_instagram (Apify posts/bio/highlights scrape per lead, max 20)
+// 06:15 — generate_observatie (Claude API — ultra-persoonlijke observatie per lead)
+// 06:30 — heygen_generate (video aanmaken voor warmed leads met observatie)
+// 07:00 — heygen_status (video URL ophalen voor completed videos)
 // 07:00 — lead enrichment (owner naam + persoonlijk IG + email via Apify, max 20)
 // 08:00 — Apify Instagram scrape (nieuwe leads)
 // 09:00 — Lemlist email sequence (max 40, onafhankelijk van warming)
@@ -28,7 +32,31 @@ export async function POST(req: NextRequest) {
   const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
   const results: Record<string, unknown> = {};
 
-  // 07:00 — Lead enrichment
+  // 06:00 — Instagram data scrapen (posts, bio, highlights)
+  if (job === 'enrich_instagram') {
+    const r = await fetch(`${baseUrl}/api/leads/enrich-instagram`, { method: 'POST' });
+    results.enrich_instagram = await r.json();
+  }
+
+  // 06:15 — Claude observatie genereren
+  if (job === 'generate_observatie') {
+    const r = await fetch(`${baseUrl}/api/generate-observatie`, { method: 'POST' });
+    results.generate_observatie = await r.json();
+  }
+
+  // 06:30 — HeyGen video aanmaken
+  if (job === 'heygen_generate') {
+    const r = await fetch(`${baseUrl}/api/heygen/generate`, { method: 'POST' });
+    results.heygen_generate = await r.json();
+  }
+
+  // 07:00 — HeyGen video URL ophalen (completed videos)
+  if (job === 'heygen_status') {
+    const r = await fetch(`${baseUrl}/api/heygen/status`);
+    results.heygen_status = await r.json();
+  }
+
+  // 07:00 — Lead enrichment (owner naam + persoonlijk IG + email)
   if (job === 'enrich' || job === 'daily_outreach') {
     const r = await fetch(`${baseUrl}/api/leads/enrich`, { method: 'POST' });
     results.enrich = await r.json();
