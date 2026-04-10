@@ -1,0 +1,171 @@
+services:
+  # ============================================================
+  # Render Cron Jobs — Next Move Marketing Outreach Automatisering
+  # Alle tijden in UTC (NL = UTC+1 in winter, UTC+2 in zomer)
+  # CRON_SECRET moet handmatig worden ingesteld in elk service dashboard
+  # ============================================================
+
+  - type: cron
+    name: nm-enrich-instagram
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 5 * * *"        # 06:00 NL
+    buildCommand: echo "skip"
+    startCommand: >-
+      curl -sf -X POST
+      https://nextmove-outreach-1.onrender.com/api/cron?job=enrich_instagram
+      -H "x-cron-secret: $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: nm-generate-observatie
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "15 5 * * *"       # 06:15 NL
+    buildCommand: echo "skip"
+    startCommand: >-
+      curl -sf -X POST
+      https://nextmove-outreach-1.onrender.com/api/cron?job=generate_observatie
+      -H "x-cron-secret: $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: nm-heygen-generate
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "30 5 * * *"       # 06:30 NL
+    buildCommand: echo "skip"
+    startCommand: >-
+      curl -sf -X POST
+      https://nextmove-outreach-1.onrender.com/api/cron?job=heygen_generate
+      -H "x-cron-secret: $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: nm-heygen-status
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 6 * * *"        # 07:00 NL
+    buildCommand: echo "skip"
+    startCommand: >-
+      curl -sf
+      https://nextmove-outreach-1.onrender.com/api/heygen/status
+      -H "x-cron-secret: $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: nm-sync-apify
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "5 6 * * *"        # 07:05 NL (5 min na heygen-status)
+    buildCommand: echo "skip"
+    startCommand: >-
+      curl -sf -X POST
+      https://nextmove-outreach-1.onrender.com/api/cron?job=sync_apify
+      -H "x-cron-secret: $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: nm-email
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 8 * * *"        # 09:00 NL
+    buildCommand: echo "skip"
+    startCommand: >-
+      curl -sf -X POST
+      https://nextmove-outreach-1.onrender.com/api/cron?job=email
+      -H "x-cron-secret: $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: nm-instagram-like
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 9 * * *"        # 10:00 NL
+    buildCommand: echo "skip"
+    startCommand: >-
+      curl -sf -X POST
+      https://nextmove-outreach-1.onrender.com/api/cron?job=instagram_like
+      -H "x-cron-secret: $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: nm-instagram-story
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "30 9 * * *"       # 10:30 NL
+    buildCommand: echo "skip"
+    startCommand: >-
+      curl -sf -X POST
+      https://nextmove-outreach-1.onrender.com/api/cron?job=instagram_story
+      -H "x-cron-secret: $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: nm-instagram-dm
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 10 * * *"       # 11:00 NL
+    buildCommand: echo "skip"
+    startCommand: >-
+      curl -sf -X POST
+      https://nextmove-outreach-1.onrender.com/api/cron?job=instagram_dm
+      -H "x-cron-secret: $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: nm-instagram-followup
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 11 * * *"       # 12:00 NL
+    buildCommand: echo "skip"
+    startCommand: >-
+      curl -sf -X POST
+      https://nextmove-outreach-1.onrender.com/api/cron?job=instagram_followup
+      -H "x-cron-secret: $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: nm-linkedin
+    env: node
+    region: frankfurt
+    plan: starter
+    schedule: "0 12 * * *"       # 13:00 NL
+    buildCommand: echo "skip"
+    startCommand: >-
+      curl -sf -X POST
+      https://nextmove-outreach-1.onrender.com/api/cron?job=linkedin
+      -H "x-cron-secret: $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
